@@ -1,0 +1,110 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+    color: #fff;
+}
+
+.controls{
+    display: flex;
+    gap: 0.75rem;
+    max-width: 700px;
+    margin: 0 auto  2rem;
+    align-items: center;
+}
+
+.controls select {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 1rem;
+    
+}
+
+button {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: none;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.25s;
+}
+
+button:hover {
+     background: #5a4bd1;
+}
+
+button:disabled {
+    background: #444;
+    cursor: not-allowed;
+}
+
+#status {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #aaa;
+    min-height: 1.5rem;
+}
+
+.download-bar {
+    display: none;
+    max-width: 700px;
+    margin: 0 auto 1.5rem;
+    text-align: center;
+}
+
+.grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 560px));
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.card img {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.card-body h3{
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+    line-height: 1.3rem;
+    overflow: hidden;
+}
+
+.card-body .source {
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 0.75rem;
+}
+
+.card-body button {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.card-body .done{
+    background: #27ae60;
+}
+
+.card-body .error{
+    background: #e74c3c;
+}
