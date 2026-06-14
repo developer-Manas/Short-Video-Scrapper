@@ -1,108 +1,210 @@
-let currentVideos = []
+let currentVideos = [];
+
+// ===================== DOM Elements =====================
+
+const queryInput = document.getElementById("query");
+const countSelect = document.getElementById("count");
+const searchBtn = document.getElementById("searchBtn");
+const downloadAllBtn = document.getElementById("download");
+const resultsGrid = document.getElementById("results");
+const statusEl = document.getElementById("status");
+
+// ===================== Status Helper =====================
+
+function setStatus(message) {
+    statusEl.textContent = message;
+}
+
+// ===================== Search =====================
 
 async function search() {
-    const q = document.getElementById("query").value.trim()
-    const count = document.getElementById("count").value
+    const q = queryInput.value.trim();
+    const count = countSelect.value;
 
-    if (!q) return
+    if (!q) {
+        setStatus("Please enter a search term.");
+        return;
+    }
 
-    const btn = document.getElementById("searchBtn")
-    btn.disabled = true
-    btn.textContent = "Searching..."
-    setStatus("Searching...")
-    document.getElementById("results").innerHTML = ""
-    document.getElementById("download").style.display = "none"
+    searchBtn.disabled = true;
+    searchBtn.textContent = "Searching...";
+
+    resultsGrid.innerHTML = "";
+    downloadAllBtn.style.display = "none";
+
+    setStatus("Searching videos...");
 
     try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&count=${count}`)
-        const data = await res.json()
-        currentVideos = data.videos || []
+        const response = await fetch(
+            `/api/search?q=${encodeURIComponent(q)}&count=${count}`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch videos");
+        }
+
+        const data = await response.json();
+
+        currentVideos = data.videos || [];
 
         if (currentVideos.length === 0) {
-            setStatus("no videos found.")
-            return
+            setStatus("No videos found.");
+            return;
         }
 
-        setStatus(`Found ${currentVideos.length} video(s)`)
-        document.getElementById("download").style.display = "block"
-        renderVideos()
+        renderVideos();
+
+        downloadAllBtn.style.display = "block";
+
+        setStatus(
+            `Found ${currentVideos.length} video(s)`
+        );
+
     } catch (err) {
-        setStatus("Error: " + err.message)
+        console.error(err);
+        setStatus(`Error: ${err.message}`);
     } finally {
-        btn.disabled = false
-        btn.textContent = "Search"
+        searchBtn.disabled = false;
+        searchBtn.textContent = "Search";
     }
 }
+
+// ===================== Render Videos =====================
 
 function renderVideos() {
-    const grid = document.getElementById("results")
-    grid.innerHTML = currentVideos.map((v, i) => `
-                    <div class="card" id="card-${i}">
-                    <img src="${v.thumbnail || ''}"
-                        alt="${v.title || 'Video'}"
-                        onerror="this.style.background='#333'" />
-                    <div class="card-body">
-                        <h3>${v.title || 'Untitled'}</h3>
-                        <p class="source">${v.source || ''}
-                            · ${v.duration || ''}</p>
-                        <button id="btn-${i}"
-                        onclick="downloadOne(${i})">Download</button>
-                    </div>
-                </div>
-    `).join("")
+    resultsGrid.innerHTML = currentVideos
+        .map(
+            (video, index) => `
+        <div class="card" id="card-${index}">
+            <img
+                src="${video.thumbnail || ""}"
+                alt="${video.title || "Video"}"
+                loading="lazy"
+                onerror="this.style.background='#333'; this.removeAttribute('src');"
+            />
+
+            <div class="card-body">
+                <h3>${escapeHTML(video.title || "Untitled")}</h3>
+
+                <p class="source">
+                    ${video.source || "Unknown Source"}
+                    ${video.duration ? ` • ${video.duration}` : ""}
+                </p>
+
+                <button
+                    id="btn-${index}"
+                    onclick="downloadOne(${index})"
+                >
+                    Download
+                </button>
+            </div>
+        </div>
+    `
+        )
+        .join("");
 }
 
-const searchButton = document.getElementById("searchBtn")
-searchButton.addEventListener("click", search)
+// ===================== Download Single Video =====================
 
 async function downloadOne(index) {
-    const video = currentVideos[index]
-    const btn = document.getElementById(`btn-${index}`)
+    const video = currentVideos[index];
 
-    btn.disabled = true
-    btn.textContent = "Downloading..."
+    if (!video?.link) {
+        console.error("Invalid video URL");
+        return;
+    }
+
+    const btn = document.getElementById(`btn-${index}`);
+
+    if (btn.classList.contains("done")) return;
+
+    btn.disabled = true;
+    btn.textContent = "Downloading...";
 
     try {
-        const res = await fetch('/api/download', {
+        const response = await fetch("/api/download", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: video.link, title: video.title })
-        })
-        const data = await res.json()
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                url: video.link,
+                title: video.title
+            })
+        });
 
-        if (data.success) {
-            btn.textContent = "✓ Done"
-            btn.classList.add("done")
-        } else {
-            btn.textContent = "✗ Failed"
-            btn.classList.add("error")
-            console.error(`Download failed for: ${video.link}`, data.error, data.details)
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "Download failed");
         }
+
+        btn.textContent = "✓ Downloaded";
+        btn.classList.remove("error");
+        btn.classList.add("done");
+
     } catch (err) {
-        btn.textContent = "✗ Failed"
-        btn.classList.add("error")
-        console.error(`Download error for: ${video.link}`, err)
+        console.error(err);
+
+        btn.textContent = "✗ Failed";
+        btn.classList.remove("done");
+        btn.classList.add("error");
     }
 }
+
+// ===================== Download All =====================
 
 async function downloadAll() {
-    setStatus("Downloading All videos...")
-    for (let i = 0; i < currentVideos.length; i++) {
-        const btn = document.getElementById(`btn-${i}`)
-        if (btn && btn.classList.contains("done")) continue
-        try {
-            await downloadOne(i)
-        } catch (err) {
-            console.error(`Failed to download video ${i}:`, err)
+    if (!currentVideos.length) return;
+
+    setStatus("Downloading all videos...");
+
+    const chunkSize = 3;
+
+    for (let i = 0; i < currentVideos.length; i += chunkSize) {
+        const chunk = [];
+
+        for (
+            let j = i;
+            j < Math.min(i + chunkSize, currentVideos.length);
+            j++
+        ) {
+            chunk.push(downloadOne(j));
         }
-        setStatus(`Downloaded ${i + 1} of ${currentVideos.length}`)
+
+        await Promise.allSettled(chunk);
+
+        setStatus(
+            `Downloaded ${Math.min(
+                i + chunkSize,
+                currentVideos.length
+            )} of ${currentVideos.length}`
+        );
     }
-    setStatus("All downloads complete!")
+
+    setStatus("All downloads completed!");
 }
 
-const downloadAllBtn = document.getElementById("download")
-downloadAllBtn.addEventListener("click", downloadAll)
+// ===================== XSS Protection =====================
 
-function setStatus(msg) {
-    document.getElementById("status").textContent = msg
+function escapeHTML(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
 }
+
+// ===================== Event Listeners =====================
+
+searchBtn.addEventListener("click", search);
+
+downloadAllBtn.addEventListener("click", downloadAll);
+
+queryInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        search();
+    }
+});
+
+// ===================== Initial State =====================
+
+setStatus("Ready. Search for videos.");
