@@ -1,13 +1,14 @@
 const express = require('express')
 const path = require('path')
-const fs = reqire('fs')
+const fs = require('fs')
 const { execFile } = require('child_process')
 const { getJson } =  require("serpapi")
+require("dotenv").config()
 const { error } = require('console')
 
 const app = express()
 const PORT = 3000
-const API_KEY = dbd00d4ee085bcca3b9450351ba6cf84e7981715ac2b5ed133f9c1b6a597dc72
+const API_KEY = process.env.API_KEY
 
 const DOWNLOAD_DIRS = path.join(__dirname, "downloads")
 
@@ -37,7 +38,7 @@ app.get("/api/search", (req, res) => {
 
 })
 
-    
+
 app.listen(PORT, () => {
     console.log(`server is running on http://localhost:${PORT}`)
 })
